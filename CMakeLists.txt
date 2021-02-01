@@ -15,6 +15,8 @@ if(
 
     add_executable(ladybug
         main.cpp
+        hub.cpp
+        hub.hpp
     )
 
     target_link_libraries(ladybug

@@ -164,22 +164,6 @@ namespace sio
         }
     }
 
-    void client_impl::set_logs_default()
-    {
-        m_client.clear_access_channels(websocketpp::log::alevel::all);
-        m_client.set_access_channels(websocketpp::log::alevel::connect | websocketpp::log::alevel::disconnect | websocketpp::log::alevel::app);
-    }
-
-    void client_impl::set_logs_quiet()
-    {
-        m_client.clear_access_channels(websocketpp::log::alevel::all);
-    }
-
-    void client_impl::set_logs_verbose()
-    {
-        m_client.set_access_channels(websocketpp::log::alevel::all);
-    }
-
     /*************************protected:*************************/
     void client_impl::send(packet& p)
     {
@@ -238,7 +222,7 @@ namespace sio
             } else {
                 ss<<uo.get_host();
             }
-            ss<<":"<<uo.get_port()<<"/socket.io/?EIO=4&transport=websocket";
+            ss<<":"<<uo.get_port()<<"/socket.io/?EIO=3&transport=websocket";
             if(m_sid.size()>0){
                 ss<<"&sid="<<m_sid;
             }
@@ -311,6 +295,12 @@ namespace sio
             lib::error_code ec;
             this->m_client.send(this->m_con, *payload, frame::opcode::text, ec);
         });
+        if(m_ping_timer)
+        {
+            asio::error_code e_code;
+            m_ping_timer->expires_from_now(milliseconds(m_ping_interval), e_code);
+            m_ping_timer->async_wait(std::bind(&client_impl::ping,this, std::placeholders::_1));
+        }
         if(!m_ping_timeout_timer)
         {
             m_ping_timeout_timer.reset(new asio::steady_timer(m_client.get_io_service()));
@@ -507,6 +497,12 @@ namespace sio
                 m_ping_timeout = 60000;
             }
 
+            m_ping_timer.reset(new asio::steady_timer(m_client.get_io_service()));
+            asio::error_code ec;
+            m_ping_timer->expires_from_now(milliseconds(m_ping_interval), ec);
+            if(ec)LOG("ec:"<<ec.message()<<endl){};
+            m_ping_timer->async_wait(std::bind(&client_impl::ping,this, std::placeholders::_1));
+            LOG("On handshake,sid:"<<m_sid<<",ping interval:"<<m_ping_interval<<",ping timeout"<<m_ping_timeout<<endl);
             return;
         }
 failed:
@@ -514,14 +510,8 @@ failed:
         m_client.get_io_service().dispatch(std::bind(&client_impl::close_impl, this,close::status::policy_violation,"Handshake error"));
     }
 
-    void client_impl::on_ping()
+    void client_impl::on_pong()
     {
-        packet p(packet::frame_pong);
-        m_packet_mgr.encode(p, [&](bool /*isBin*/,shared_ptr<const string> payload)
-        {
-            this->m_client.send(this->m_con, *payload, frame::opcode::text);
-        });
-
         if(m_ping_timeout_timer)
         {
             m_ping_timeout_timer->cancel();
@@ -546,8 +536,8 @@ failed:
             //FIXME how to deal?
             this->close_impl(close::status::abnormal_close, "End by server");
             break;
-        case packet::frame_ping:
-            this->on_ping();
+        case packet::frame_pong:
+            this->on_pong();
             break;
 
         default:
@@ -569,6 +559,11 @@ failed:
         {
             m_ping_timeout_timer->cancel(ec);
             m_ping_timeout_timer.reset();
+        }
+        if(m_ping_timer)
+        {
+            m_ping_timer->cancel(ec);
+            m_ping_timer.reset();
         }
     }
     

@@ -1,20 +1,22 @@
-#include "lib/socket.io-client-cpp/src/sio_client.h"
-#include "lib/json/single_include/nlohmann/json.hpp"
+#include <sio_client.h>
+// #include "lib/json/single_include/nlohmann/json.hpp"
+
+#include "hub.hpp"
 
 #include <memory>
 #include <pthread.h>
 #include <string>
 
-using json = nlohmann::json;
+// using json = nlohmann::json;
 
-// std::shared_ptr<sio::client> sioclient(nullptr);
-std::string hub = "10.10.10.10:3000";
+std::string hub_address = "http://10.0.0.88:3000";
 
 int main(int argc, char *argv[]) {
     // connect to hub
     auto sioclient = std::make_shared<sio::client>();
-    sioclient->connect(hub);
-      
+    auto hub = std::make_shared<Hub>(sioclient, hub_address);
+    hub->start();
+    
     
     
     
@@ -22,5 +24,14 @@ int main(int argc, char *argv[]) {
     
     
     // end program
-    sioclient->close();
+    hub->stop();
 }
+
+// @todo: 
+// arguments:
+// hub address, logfile
+
+// json register string
+// register ack callback
+// disconnect
+

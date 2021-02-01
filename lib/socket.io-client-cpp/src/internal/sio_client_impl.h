@@ -122,13 +122,7 @@ namespace sio
         void set_reconnect_delay(unsigned millis) {m_reconn_delay = millis;if(m_reconn_delay_max<millis) m_reconn_delay_max = millis;}
 
         void set_reconnect_delay_max(unsigned millis) {m_reconn_delay_max = millis;if(m_reconn_delay>millis) m_reconn_delay = millis;}
-
-        void set_logs_default();
-
-        void set_logs_quiet();
-
-        void set_logs_verbose();
-
+        
     protected:
         void send(packet& p);
         
@@ -176,7 +170,7 @@ namespace sio
         //socketio callbacks
         void on_handshake(message::ptr const& message);
 
-        void on_ping();
+        void on_pong();
 
         void reset_states();
 
@@ -206,6 +200,8 @@ namespace sio
         std::unique_ptr<std::thread> m_network_thread;
         
         packet_manager m_packet_mgr;
+        
+        std::unique_ptr<asio::steady_timer> m_ping_timer;
         
         std::unique_ptr<asio::steady_timer> m_ping_timeout_timer;
 
