@@ -134,7 +134,7 @@ void Hub::on_register(const sio::message::list &msglist)
             auto &element = msglist.at(i);
             auto msg_map = element->get_map();
             auto return_code = msg_map.find("code"); // ->second->get_string();
-            // std::cerr << "return code: " << return_code << std::endl;
+            std::cerr << "return code type: " << msg_map.find("code")->second->get_flag() << std::endl;
             // std::string message = element->get_map().find("message")->second->get_string();
             // std::cerr << "msglist index: " << i << ". Register code: " << return_code << ". Message: " << message << std::endl;
         }
